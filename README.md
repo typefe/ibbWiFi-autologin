@@ -1,19 +1,60 @@
 # IBB WiFi Captive Portal Auto Login
 
-A containerized Android build environment for developing a captive portal auto-login app.
+An Android app that automatically logs into the IBB WiFi captive portal when connected to the network.
 
-## Optimized Build Process
+## Features
+
+- **Automatic Login**: Detects when connected to IBB WiFi and automatically logs in
+- **Credential Storage**: Securely stores your login credentials
+- **Format Validation**: Ensures phone number and MAC address are in the correct format
+- **Automatic Formatting**: Helps format your phone number as you type
+- **MAC Address Helper**: Includes instructions to find your device's MAC address
+
+## How to Use
+
+1. **Enter Your Credentials**:
+   - Phone Number: Must be in format `(500) 123 23 24` (will be auto-formatted)
+   - Password: Your IBB WiFi password
+   - MAC Address: Your device's WiFi MAC address in format `XX:XX:XX:XX:XX:XX`
+
+2. **Save Settings**: Tap the "Save Settings" button to store your credentials
+
+3. **Connect to IBB WiFi**: The app will automatically detect when you connect to IBB WiFi and attempt to log in
+
+4. **Check Connection**: Use the "Check Connection" button to manually verify your connection status
+
+## Finding Your MAC Address
+
+Since Android 6.0+, apps cannot programmatically access the MAC address for privacy reasons. You need to manually enter it:
+
+- **On Android 10+**: Go to Settings > About Phone > Status > Wi-Fi MAC address
+- **On Android 9 and below**: Go to Settings > Wi-Fi > Menu (three dots) > Advanced > MAC address
+
+## Important Notes
+
+- Phone number must be in the exact format `(500) 123 23 24`
+- MAC address must be in the format `XX:XX:XX:XX:XX:XX` (uppercase or lowercase letters A-F and numbers 0-9)
+- The app requires the following permissions:
+  - ACCESS_FINE_LOCATION (to detect WiFi networks)
+  - ACCESS_WIFI_STATE
+  - ACCESS_NETWORK_STATE
+  - INTERNET
+  - CHANGE_WIFI_STATE
+
+## Build Instructions
+
+### Using Docker (Recommended)
 
 This project uses a persistent Docker container with a pre-warmed Gradle daemon to speed up builds.
 
-### Initial Setup
+#### Initial Setup
 
 ```bash
 # Build the Docker image and start the container with a pre-warmed Gradle daemon
 docker-compose up -d
 ```
 
-### Fast Builds
+#### Fast Builds
 
 After the initial setup, use the fast-build script for quick builds:
 
