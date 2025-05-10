@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IBB WiFi Auto Login</string>
+    <string name="check_connection">Check Connection</string>
+    <string name="waiting_for_wifi">Waiting for WiFi connection...</string>
+    <string name="app_description">This app will automatically login to ibbWiFi captive portal when connected</string>
+    <string name="wifi_disabled">WiFi is disabled. Please enable WiFi.</string>
+    <string name="connected_to_ibbwifi">Connected to ibbWiFi</string>
+    <string name="checking_internet">Checking internet connection...</string>
+    <string name="internet_available">Internet connection is available</string>
+    <string name="no_internet">No internet connection</string>
+    <string name="attempting_login">Attempting login...</string>
+    <string name="not_connected_to_ibbwifi">Not connected to ibbWiFi</string>
+    <string name="current_network">Current network: %s</string>
+    <string name="permissions_required">App requires permissions to function properly</string>
+</resources> 

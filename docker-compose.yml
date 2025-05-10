@@ -1,0 +1,14 @@
+services:
+  android-builder:
+    build: .
+    volumes:
+      - .:/project
+      - gradle-cache:/root/.gradle
+      - android-sdk-cache:/opt/android-sdk
+    tty: true
+    working_dir: /project
+    command: tail -f /dev/null
+
+volumes:
+  gradle-cache:
+  android-sdk-cache:

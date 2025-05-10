@@ -1,0 +1,2 @@
+rootProject.name = "IBBWiFi"
+include ':app'
