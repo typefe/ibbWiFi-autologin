@@ -9,7 +9,9 @@ import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.Html;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText passwordEditText;
     private TextInputEditText macAddressEditText;
     private TextInputLayout macAddressLayout;
+    private TextInputLayout phoneNumberLayout;
     private FloatingActionButton helpButton;
     private SharedPreferences preferences;
 
@@ -51,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         macAddressEditText = findViewById(R.id.macAddressEditText);
         macAddressLayout = findViewById(R.id.macAddressLayout);
+        phoneNumberLayout = findViewById(R.id.phoneNumberLayout);
         helpButton = findViewById(R.id.helpButton);
         Button saveButton = findViewById(R.id.saveButton);
         Button checkButton = findViewById(R.id.checkButton);
@@ -65,6 +69,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up help button
         helpButton.setOnClickListener(v -> showMacAddressHelpDialog());
+
+        // Set up phone number formatter
+        phoneNumberEditText.addTextChangedListener(new PhoneNumberFormattingTextWatcher());
 
         // Set up button listeners
         saveButton.setOnClickListener(v -> savePreferences());
@@ -81,6 +88,66 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(wifiReceiver, intentFilter);
 
         statusTextView.setText("IBB WiFi Auto Login is running\nWaiting for WiFi connection...");
+    }
+
+    // TextWatcher to format phone number as user types
+    private class PhoneNumberFormattingTextWatcher implements TextWatcher {
+        private boolean isFormatting;
+        private String lastFormatted = "";
+
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            // Not used
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            // Not used
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            if (isFormatting) {
+                return;
+            }
+
+            isFormatting = true;
+
+            // Remove all non-digit characters
+            String digits = s.toString().replaceAll("\\D", "");
+
+            // Format the phone number
+            StringBuilder formatted = new StringBuilder();
+            if (digits.length() > 0) {
+                formatted.append("(");
+                formatted.append(digits.substring(0, Math.min(3, digits.length())));
+
+                if (digits.length() > 3) {
+                    formatted.append(") ");
+                    formatted.append(digits.substring(3, Math.min(6, digits.length())));
+
+                    if (digits.length() > 6) {
+                        formatted.append(" ");
+                        formatted.append(digits.substring(6, Math.min(8, digits.length())));
+
+                        if (digits.length() > 8) {
+                            formatted.append(" ");
+                            formatted.append(digits.substring(8, Math.min(10, digits.length())));
+                        }
+                    }
+                }
+            }
+
+            String newFormatted = formatted.toString();
+
+            // Only update if the formatting changed to avoid infinite loop
+            if (!newFormatted.equals(lastFormatted)) {
+                lastFormatted = newFormatted;
+                s.replace(0, s.length(), newFormatted);
+            }
+
+            isFormatting = false;
+        }
     }
 
     private void showMacAddressHelpDialog() {
@@ -128,6 +195,12 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        // Validate phone number format
+        if (!isValidPhoneNumber(phoneNumber)) {
+            Toast.makeText(this, "Phone number must be in format: (500) 123 23 24", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         if (password.isEmpty()) {
             Toast.makeText(this, "Password cannot be empty", Toast.LENGTH_SHORT).show();
             return;
@@ -151,6 +224,11 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
 
         Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show();
+    }
+
+    private boolean isValidPhoneNumber(String phoneNumber) {
+        // Check if phone number matches the format "(500) 123 23 24"
+        return phoneNumber.matches("\\(\\d{3}\\) \\d{3} \\d{2} \\d{2}");
     }
 
     private boolean isValidMacAddress(String macAddress) {
