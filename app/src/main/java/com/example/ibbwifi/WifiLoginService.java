@@ -202,8 +202,7 @@ public class WifiLoginService extends Service {
                     (loginResponse.length() > 200 ? loginResponse.substring(0, 200) : loginResponse));
 
             // Check if login was successful
-            if (loginResponse.contains("success") || loginResponse.contains("başarı") ||
-                    loginResponse.contains("Giriş başarılı")) {
+            if (loginResponse.contains("pageRedirect||https%3a%2f%2fibb.istanbul")) {
                 Log.d(TAG, "Login successful");
                 showToast("Login successful!");
             } else {
