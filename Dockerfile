@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk
 
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
 ENV GRADLE_VERSION=8.4
