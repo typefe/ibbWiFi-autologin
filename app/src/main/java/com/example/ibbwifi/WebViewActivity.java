@@ -33,6 +33,8 @@ public class WebViewActivity extends AppCompatActivity {
         webSettings.setSupportZoom(true);
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
+        // Use desktop user-agent to avoid mobile redirects to the vendor app.
+        webSettings.setUserAgentString(WifiLoginService.DESKTOP_USER_AGENT);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override

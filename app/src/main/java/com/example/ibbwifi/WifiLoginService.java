@@ -49,6 +49,8 @@ public class WifiLoginService extends Service {
     private static final String COUNTRY_CODE = "90";
     private static final String FLAG_CODE = "tr";
     private static final int MAX_REDIRECTS = 4;
+    // Force a desktop user-agent to prevent captive portal from redirecting to mobile-app flows.
+    static final String DESKTOP_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -121,6 +123,7 @@ public class WifiLoginService extends Service {
             Log.d(TAG, "Landing UUID: " + landingUuid);
 
             Map<String, String> jsonHeaders = new HashMap<>(baseHeaders);
+            jsonHeaders.put("User-Agent", DESKTOP_USER_AGENT);
             jsonHeaders.put("Content-Type", "application/json");
             jsonHeaders.put("Origin", "https://captive.ibbwifi.istanbul");
             jsonHeaders.put("Referer", "https://captive.ibbwifi.istanbul/");
@@ -173,8 +176,7 @@ public class WifiLoginService extends Service {
 
     private Map<String, String> buildBaseHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("User-Agent",
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36");
+        headers.put("User-Agent", DESKTOP_USER_AGENT);
         headers.put("Accept",
                 "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
         headers.put("Accept-Language", "en-US,en;q=0.9");

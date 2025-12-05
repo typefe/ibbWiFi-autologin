@@ -58,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
         helpButton = findViewById(R.id.helpButton);
         Button saveButton = findViewById(R.id.saveButton);
         Button checkButton = findViewById(R.id.checkButton);
+        Button tryLoginButton = findViewById(R.id.tryLoginButton);
+        Button manualPortalButton = findViewById(R.id.manualPortalButton);
 
         // Initialize Preferences
         preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -76,6 +78,8 @@ public class MainActivity extends AppCompatActivity {
         // Set up button listeners
         saveButton.setOnClickListener(v -> savePreferences());
         checkButton.setOnClickListener(v -> checkWifiConnection());
+        tryLoginButton.setOnClickListener(v -> manualLogin());
+        manualPortalButton.setOnClickListener(v -> openManualPortal());
 
         // Request necessary permissions
         requestPermissions();
@@ -282,6 +286,54 @@ public class MainActivity extends AppCompatActivity {
             return true;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    private void manualLogin() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        if (wifiManager == null || !wifiManager.isWifiEnabled()) {
+            statusTextView.setText("WiFi is disabled. Please enable WiFi.");
+            return;
+        }
+
+        String ssid = wifiManager.getConnectionInfo().getSSID();
+        if (ssid == null || (!ssid.contains("ibbWiFi") && !ssid.contains("IBB"))) {
+            statusTextView.setText("Manual login requires ibbWiFi connection. Current network: " + ssid);
+            return;
+        }
+
+        statusTextView.setText("Auto login attempt started...");
+        Intent serviceIntent = new Intent(this, WifiLoginService.class);
+        startService(serviceIntent);
+    }
+
+    private void openManualPortal() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        if (wifiManager == null || !wifiManager.isWifiEnabled()) {
+            statusTextView.setText("WiFi is disabled. Please enable WiFi.");
+            return;
+        }
+
+        String ssid = wifiManager.getConnectionInfo().getSSID();
+        if (ssid == null || (!ssid.contains("ibbWiFi") && !ssid.contains("IBB"))) {
+            statusTextView.setText("Manual portal requires ibbWiFi connection. Current network: " + ssid);
+            return;
+        }
+
+        String macAddress = macAddressEditText.getText() != null ? macAddressEditText.getText().toString() : "";
+        if (macAddress.isEmpty() || !isValidMacAddress(macAddress)) {
+            statusTextView.setText("Enter a valid MAC address to open the portal.");
+            return;
+        }
+
+        try {
+            String encodedMac = java.net.URLEncoder.encode(macAddress, "UTF-8");
+            String url = "https://captive.ibbwifi.istanbul/?mac=" + encodedMac;
+            Intent intent = new Intent(this, WebViewActivity.class);
+            intent.putExtra("URL", url);
+            startActivity(intent);
+        } catch (Exception e) {
+            statusTextView.setText("Failed to open portal: " + e.getMessage());
         }
     }
 
