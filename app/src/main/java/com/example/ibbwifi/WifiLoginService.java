@@ -45,7 +45,7 @@ public class WifiLoginService extends Service {
     private static final String PREF_PASSWORD = "password";
     private static final String PREF_MAC_ADDRESS = "mac_address";
 
-    private static final String BASE_URL = "https://captive.ibbwifi.istanbul/";
+    private static final String PORTAL_HOST = "captive.ibbwifi.istanbul";
     private static final String COUNTRY_CODE = "90";
     private static final String FLAG_CODE = "tr";
     private static final int MAX_REDIRECTS = 4;
@@ -109,51 +109,48 @@ public class WifiLoginService extends Service {
 
             Map<String, String> baseHeaders = buildBaseHeaders();
 
-            // Step 1: Initial GET to obtain landing page UUID
-            String step1Url = BASE_URL + "?mac=" + encodedMac;
-            HttpResult step1Result = executeGet(step1Url, baseHeaders);
-            logCookieStatus(cookieManager);
-
-            String landingUuid = extractUserId(step1Result.body);
-            if (landingUuid == null) {
-                Log.e(TAG, "Failed to find landing UUID");
-                showToast("Login failed: UUID not found (step 1)");
+            PortalConnection portalConnection = connectToPortal(encodedMac, baseHeaders);
+            if (portalConnection == null) {
+                showToast("Login failed: portal unreachable");
+                Log.e(TAG, "Portal unreachable");
                 return;
             }
-            Log.d(TAG, "Landing UUID: " + landingUuid);
+
+            String baseUrl = portalConnection.baseUrl;
+            logCookieStatus(cookieManager);
 
             Map<String, String> jsonHeaders = new HashMap<>(baseHeaders);
             jsonHeaders.put("User-Agent", DESKTOP_USER_AGENT);
             jsonHeaders.put("Content-Type", "application/json");
-            jsonHeaders.put("Origin", "https://captive.ibbwifi.istanbul");
-            jsonHeaders.put("Referer", "https://captive.ibbwifi.istanbul/");
+            jsonHeaders.put("Origin", baseUrl);
+            jsonHeaders.put("Referer", baseUrl + "/");
 
             // Step 2: Send phone number
             String phonePayload = String.format(Locale.US,
                     "{\"PhoneNumber\":\"%s\",\"CountryCode\":\"%s\",\"FlagCode\":\"%s\"}",
                     phoneNumberDigits, COUNTRY_CODE, FLAG_CODE);
 
-            HttpResult step2Result = executePostJson(BASE_URL + landingUuid + "/LandingCheck", jsonHeaders,
-                    phonePayload);
-            Log.d(TAG, "Phone submission status: " + step2Result.code);
+            HttpResult phoneResult = executePostJson(baseUrl + "/LandingCheck", jsonHeaders, phonePayload);
+            Log.d(TAG, "Phone submission status: " + phoneResult.code + " final URL: " + phoneResult.finalUrl);
 
-            String loginUuid = extractUserId(step2Result.body);
+            String loginUuid = extractUserId(phoneResult.body);
             if (loginUuid == null) {
                 Log.e(TAG, "Failed to find login UUID after phone submission");
-                Log.d(TAG, "Step 2 response preview: " + preview(step2Result.body));
+                Log.d(TAG, "Phone response preview: " + preview(phoneResult.body));
                 showToast("Login failed: UUID not found after phone step");
                 return;
             }
             Log.d(TAG, "Login UUID: " + loginUuid);
 
-            // Step 3: Send password
+            // Final step: Send password
             String passwordPayload = String.format(Locale.US, "{\"Password\":\"%s\"}", password);
-            HttpResult step4Result = executePostJson(BASE_URL + loginUuid + "/Login", jsonHeaders, passwordPayload);
-            Log.d(TAG, "Password submission status: " + step4Result.code);
-            Log.d(TAG, "Login response preview: " + preview(step4Result.body));
+            HttpResult loginResult = executePostJson(baseUrl + "/" + loginUuid + "/Login", jsonHeaders,
+                    passwordPayload);
+            Log.d(TAG, "Password submission status: " + loginResult.code);
+            Log.d(TAG, "Login response preview: " + preview(loginResult.body));
 
-            boolean likelySuccess = step4Result.code == HttpURLConnection.HTTP_OK
-                    && !step4Result.body.toLowerCase(Locale.US).contains("error");
+            boolean likelySuccess = loginResult.code == HttpURLConnection.HTTP_OK
+                    && !loginResult.body.toLowerCase(Locale.US).contains("error");
             if (likelySuccess) {
                 showToast("Login request sent. Checking internet...");
             } else {
@@ -197,6 +194,22 @@ public class WifiLoginService extends Service {
         return executeWithRedirects(url, "POST", headers, payload);
     }
 
+    @Nullable
+    private PortalConnection connectToPortal(String encodedMac, Map<String, String> baseHeaders) {
+        String baseUrl = "http://" + PORTAL_HOST;
+        String step1Url = baseUrl + "/?mac=" + encodedMac;
+        try {
+            Log.d(TAG, "Connecting to portal (HTTP first, will follow HTTPS redirect if any)");
+            HttpResult result = executeGet(step1Url, baseHeaders);
+            String resolvedBaseUrl = extractBaseUrl(result.finalUrl != null ? result.finalUrl : baseUrl);
+            Log.d(TAG, "Portal reachable at: " + resolvedBaseUrl);
+            return new PortalConnection(resolvedBaseUrl, result);
+        } catch (IOException e) {
+            Log.w(TAG, "Portal connection failed: " + e.getMessage());
+            return null;
+        }
+    }
+
     private HttpResult executeWithRedirects(String url, String method, Map<String, String> headers,
             @Nullable String payload) throws IOException {
         String currentUrl = url;
@@ -227,7 +240,7 @@ public class WifiLoginService extends Service {
             }
 
             connection.disconnect();
-            return new HttpResult(code, body);
+            return new HttpResult(code, body, currentUrl);
         }
 
         throw new IOException("Too many redirects");
@@ -357,10 +370,32 @@ public class WifiLoginService extends Service {
     private static class HttpResult {
         final int code;
         final String body;
+        final String finalUrl;
 
-        HttpResult(int code, String body) {
+        HttpResult(int code, String body, String finalUrl) {
             this.code = code;
             this.body = body;
+            this.finalUrl = finalUrl;
+        }
+    }
+
+    private static class PortalConnection {
+        final String baseUrl;
+        final HttpResult initialResult;
+
+        PortalConnection(String baseUrl, HttpResult initialResult) {
+            this.baseUrl = baseUrl;
+            this.initialResult = initialResult;
+        }
+    }
+
+    private String extractBaseUrl(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            return url.getProtocol() + "://" + url.getHost();
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to parse base URL from: " + urlString, e);
+            return "http://" + PORTAL_HOST;
         }
     }
 }

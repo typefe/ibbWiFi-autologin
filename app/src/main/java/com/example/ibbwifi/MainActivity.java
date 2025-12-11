@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREF_PHONE_NUMBER = "phone_number";
     private static final String PREF_PASSWORD = "password";
     private static final String PREF_MAC_ADDRESS = "mac_address";
+    private static final String PORTAL_BASE_HTTP = "http://captive.ibbwifi.istanbul/";
 
     private WifiReceiver wifiReceiver;
     private TextView statusTextView;
@@ -328,7 +329,8 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             String encodedMac = java.net.URLEncoder.encode(macAddress, "UTF-8");
-            String url = "https://captive.ibbwifi.istanbul/?mac=" + encodedMac;
+            // Start with HTTP to support the current captive portal; it will redirect to HTTPS if available.
+            String url = PORTAL_BASE_HTTP + "?mac=" + encodedMac;
             Intent intent = new Intent(this, WebViewActivity.class);
             intent.putExtra("URL", url);
             startActivity(intent);
