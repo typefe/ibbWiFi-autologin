@@ -125,6 +125,12 @@ public class WifiLoginService extends Service {
             jsonHeaders.put("Origin", baseUrl);
             jsonHeaders.put("Referer", baseUrl + "/");
 
+            String initialCsrfToken = extractCsrfToken(portalConnection.initialResult.body);
+            if (initialCsrfToken != null) {
+                Log.d(TAG, "Extracted initial CSRF Token: " + initialCsrfToken);
+                jsonHeaders.put("X-CSRF-TOKEN", initialCsrfToken);
+            }
+
             // Step 2: Send phone number
             String phonePayload = String.format(Locale.US,
                     "{\"PhoneNumber\":\"%s\",\"CountryCode\":\"%s\",\"FlagCode\":\"%s\"}",
@@ -141,6 +147,12 @@ public class WifiLoginService extends Service {
                 return;
             }
             Log.d(TAG, "Login UUID: " + loginUuid);
+
+            String loginCsrfToken = extractCsrfToken(phoneResult.body);
+            if (loginCsrfToken != null) {
+                Log.d(TAG, "Extracted new CSRF Token for Login: " + loginCsrfToken);
+                jsonHeaders.put("X-CSRF-TOKEN", loginCsrfToken);
+            }
 
             // Final step: Send password
             String passwordPayload = String.format(Locale.US, "{\"Password\":\"%s\"}", password);
@@ -327,6 +339,34 @@ public class WifiLoginService extends Service {
             }
         } catch (Exception e) {
             Log.e(TAG, "Fallback regex parse failed", e);
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private String extractCsrfToken(String html) {
+        try {
+            Document doc = Jsoup.parse(html);
+            Element csrfInput = doc.selectFirst("input[name=__RequestVerificationToken]");
+            if (csrfInput != null) {
+                String value = csrfInput.attr("value");
+                if (value != null && !value.isEmpty()) {
+                    return value;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing HTML for CSRF token", e);
+        }
+
+        try {
+            Pattern pattern = Pattern.compile("name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"");
+            Matcher matcher = pattern.matcher(html);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Fallback regex parse failed for CSRF token", e);
         }
 
         return null;
